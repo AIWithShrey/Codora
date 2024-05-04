@@ -44,7 +44,7 @@ def response_generator(prompt, image=None):
 
 # Streamlit app
 
-st.title("Code - Your personal coding mentor")
+st.title("Codora - Your personal coding mentor")
 
 # Initialize chat history
 if "messages" not in st.session_state:
