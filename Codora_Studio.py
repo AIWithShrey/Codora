@@ -342,17 +342,17 @@ uploaded_image = st.file_uploader("Upload an image of your code", type=['jpeg', 
 # Accept user input
 if prompt := st.chat_input("Enter your code here"):
     # Add user message to chat history
-    st.spinner("Researching...")
     st.session_state.messages.append({"role": "user", "content": prompt})
     # Display user message in chat message container
     with st.chat_message("user"):
         st.markdown(prompt)
     # Display assistant response in chat message container
     with st.chat_message("assistant"):
-        stream = gemini_ReAct_chat(prompt, 
-                                   uploaded_image,
-                                   8 )
-        # Display assistant response in chat message container
-        response = st.write_stream(stream)
+        with st.spinner("Researching and generating response..."):
+            stream = gemini_ReAct_chat(prompt, 
+                                       uploaded_image,
+                                       8 )
+            # Display assistant response in chat message container
+            response = st.write_stream(stream)
     # Add assistant response to chat history
     st.session_state.messages.append({"role": "assistant", "content": response})
