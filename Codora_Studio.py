@@ -321,7 +321,7 @@ gemini_ReAct_chat = ReAct(model='gemini-1.5-pro-latest',
 
 
 # Streamlit app
-#st.set_page_config(layout="wide", page_title="Codora AI")
+st.set_page_config(layout="wide", page_title="Codora AI")
 
 st.title("Codora - Your personal coding mentor")
 st.text("Codora is an AI assistant that helps you with your code. You can ask questions, seek guidance, and get assistance in coding. Codora will guide you in understanding and solving your programming issues without giving direct code solutions. Let's start coding!")
@@ -342,6 +342,7 @@ uploaded_image = st.file_uploader("Upload an image of your code", type=['jpeg', 
 # Accept user input
 if prompt := st.chat_input("Enter your code here"):
     # Add user message to chat history
+    st.spinner("Researching...")
     st.session_state.messages.append({"role": "user", "content": prompt})
     # Display user message in chat message container
     with st.chat_message("user"):
