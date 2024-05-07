@@ -321,10 +321,11 @@ gemini_ReAct_chat = ReAct(model='gemini-1.5-pro-latest',
 
 
 # Streamlit app
+st.set_page_config(wide_mode=True)
 
 st.title("Codora - Your personal coding mentor")
-st.write("Codora is an AI assistant that helps you with your code. You can ask questions, seek guidance, and get assistance in coding. Codora will guide you in understanding and solving your programming issues without giving direct code solutions. Let's start coding!")
-st.write("UPDATE: Codora can now do its own research by searching Stack Overflow for you! Just ask your question, and Codora will find the most relevant results for you to explore.")
+st.text("Codora is an AI assistant that helps you with your code. You can ask questions, seek guidance, and get assistance in coding. Codora will guide you in understanding and solving your programming issues without giving direct code solutions. Let's start coding!")
+st.text("UPDATE: Codora can now do its own research by searching Stack Overflow for you! Just ask your question, and Codora will find the most relevant results for you to explore.")
 
 
 # Initialize chat history
