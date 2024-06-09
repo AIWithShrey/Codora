@@ -13,15 +13,10 @@ load_dotenv(find_dotenv())
 genai.configure(api_key=os.getenv("GOOGLE_AI_API_KEY"))
 
 model_instructions = """
-Solve a question answering task with interleaving Thought, Action, Observation steps. Thought can reason about the current situation, guiding the user towards understanding and solving their programming issues without giving direct code solutions. Action can be of three types:
-
-(1) <search>query</search>, which searches Stack Overflow for the query and returns the most relevant results. If the exact answer isn't found, it will suggest relevant topics or threads that the user can explore further.
-
-(2) <lookup>keyword</lookup>, which searches within the found Stack Overflow discussions for the keyword. This function is meant to pinpoint specific information within a larger context, helping to refine the response based on the user's follow-up queries or additional details they might need.
-
-(3) <finish>guidance</finish>, which synthesizes the information gathered through searches and lookups into a coherent piece of guidance. This step concludes the task by providing a clear, concise, and useful suggestion or explanation that guides the user in debugging or understanding their code better, based on best practices and expert discussions from Stack Overflow.
-
-Each step is designed to progressively aid the user in problem-solving by using a systematic approach to extract and interpret useful information from Stack Overflow, encouraging learning and self-reliance in debugging and coding tasks.
+Solve a question answering task with interleaving Thought, Action, Observation steps. Thought can reason about the current situation, Observation is understanding relevant information from an Action's output and Action can be of three types:
+(1) <search>entity</search>, which searches the exact entity on Stack Overflow and returns the first paragraph if it exists. If not, it will return some similar entities to search and you can try to search the information from those topics.
+(2) <lookup>keyword</lookup>, which returns the next sentence containing keyword in the current context. This only does exact matches, so keep your searches short.
+(3) <finish>answer</finish>, which returns the answer and finishes the task.
 """
 
 examples = """
@@ -145,7 +140,6 @@ class ReAct:
     self._search_urls: list[str] = []
 
     try:
-      # try to read the file
       with open(ReAct_prompt, 'r') as f:
         self._prompt = f.read()
     except FileNotFoundError:
@@ -229,16 +223,13 @@ def lookup(self, phrase: str, context_length=200):
     if not self._search_history:
         return "No recent search history available."
 
-    # Assuming the last search fetched a text content, stored in self._search_content
     content = self._search_content
-    # Clean and prepare the content for search
     content = self.clean(content)
     start_index = content.find(phrase)
 
     if start_index == -1:
         return "Phrase not found in the current context."
 
-    # Extract context around the found phrase
     start = max(0, start_index - context_length)
     end = start_index + len(phrase) + context_length
     result = content[start:end]
@@ -275,7 +266,9 @@ def __call__(self, user_question, image=None, max_calls=8, **generation_kwargs):
             break
 
         response = self.chat.send_message(content=model_prompt,
-                                          generation_config=generation_kwargs, stream=False)
+                                          generation_config=generation_kwargs, 
+                                          stream=False)
+        print(response.text)
 
         response_cmd = self.chat.history[-1].parts[-1].text
 
@@ -290,7 +283,7 @@ def __call__(self, user_question, image=None, max_calls=8, **generation_kwargs):
                     for word in observation.split():
                         yield word + ' '
                         time.sleep(0.05)
-                    #print(f"\nFinal Guidance: {observation}")  # Printing final guidance
+                    #print(f"\nFinal Guidance: {observation}")  # Printing final guidance for debugging
                     break
 
                 stream_message = f"\nObservation {idx + 1}\n{observation}"
@@ -307,52 +300,45 @@ def __call__(self, user_question, image=None, max_calls=8, **generation_kwargs):
 generation_config = {
         "max_output_tokens": 2048,
         "temperature": 0.3,
+        "top_p": 0.95,
+        "top_k": 64,
+        "max_output_tokens": 8192
         }
 
 system_instruction = """You are Codora, an AI assistant that helps you with your code. 
 You accept user input and provide assistance in coding. Do not provide answers, but guide the user to the right direction.
 Provide any necessary information to the user to help them understand the problem and solve it on their own.
 Again, do not provide answers, but guide the user to the right direction.
-Your answers should be crisp, clear and concise."""
+Your answers should be crisp, clear and concise. 
+If you want write a piece of code just use three backticks without specifying the language as the Streamlit text box does not support code formatting."""
 
 gemini_ReAct_chat = ReAct(model='gemini-1.5-pro-latest', 
                           system_instruction=system_instruction, 
                           ReAct_prompt='model_instructions.txt')
 
-
-# Streamlit app
 st.set_page_config(layout="wide", page_title="Codora AI")
 
 st.title("Codora - Your personal coding mentor")
 st.text("Codora is an AI assistant that helps you with your code. You can ask questions, seek guidance, and get assistance in coding. Codora will guide you in understanding and solving your programming issues without giving direct code solutions. Let's start coding!")
 st.text("UPDATE: Codora can now do its own research by searching Stack Overflow for you! Just ask your question, and Codora will find the most relevant results for you to explore.")
 
-
-# Initialize chat history
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Display chat messages from history on app rerun
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
 uploaded_image = st.file_uploader("Upload an image of your code", type=['jpeg', 'png', 'jpg'])
 
-# Accept user input
 if prompt := st.chat_input("Enter your code here"):
-    # Add user message to chat history
     st.session_state.messages.append({"role": "user", "content": prompt})
-    # Display user message in chat message container
     with st.chat_message("user"):
         st.markdown(prompt)
-    # Display assistant response in chat message container
     with st.chat_message("assistant"):
         with st.spinner("Researching and generating response..."):
-            stream = gemini_ReAct_chat(prompt, 
+            stream = gemini_ReAct_chat(prompt + " " + gemini_ReAct_chat.chat.history[-1] if gemini_ReAct_chat.chat.history else prompt, 
                                        uploaded_image,
-                                       8 )
-            # Display assistant response in chat message container
+                                       2)
             response = st.write_stream(stream)
-    # Add assistant response to chat history
     st.session_state.messages.append({"role": "assistant", "content": response})
