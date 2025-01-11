@@ -1,4 +1,10 @@
-python-dotenv
-google-generativeai
-Pillow
-streamlit
+langchain==0.3.14
+langchain_community==0.3.14
+langchain_core==0.3.29
+langchain_google_genai==2.0.8
+Pillow==11.1.0
+protobuf==5.29.3
+python-dotenv==1.0.1
+Requests==2.32.3
+streamlit==1.41.1
+stackapi
